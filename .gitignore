@@ -1,0 +1,13 @@
+.build/
+dist/
+releases/
+.DS_Store
+.swiftpm/
+INSTALL-STATUS.md
+*.log
+*.tmp
+*.p12
+*.p8
+*.pem
+*.key
+.env*

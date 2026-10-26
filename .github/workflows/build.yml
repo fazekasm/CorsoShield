@@ -1,0 +1,21 @@
+name: macOS build and safety tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install scan engine for harmless fixture tests
+        run: brew install clamav
+      - name: Build universal app with pinned Sparkle
+        run: ARCHS='arm64 x86_64' bash scripts/build.sh
+      - name: Quarantine, restore and indicator tests
+        run: bash scripts/test-safety.sh
+      - name: Real ClamAV fixture tests
+        run: bash scripts/test-core.sh
+# Releases are signed and published locally from the owner's Keychain.
+# CI has no update-signing secrets and cannot publish executable updates.
