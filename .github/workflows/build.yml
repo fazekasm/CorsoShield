@@ -17,5 +17,12 @@ jobs:
         run: bash scripts/test-safety.sh
       - name: Real ClamAV fixture tests
         run: bash scripts/test-core.sh
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Windows PowerShell 5.1 parser and isolated remediation/recovery tests
+        shell: powershell
+        run: .\Windows\Tests\Run-Tests.ps1
 # Releases are signed and published locally from the owner's Keychain.
 # CI has no update-signing secrets and cannot publish executable updates.

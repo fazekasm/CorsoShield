@@ -1,6 +1,6 @@
 {
-  "version": "2.2.0",
-  "build": "220",
+  "version": "2.3.0",
+  "build": "230",
   "repository": "fazekasm/CorsoShield",
   "feedURL": "https://github.com/fazekasm/CorsoShield/releases/latest/download/appcast.xml",
   "publicKey": "Po9HcLVl3NZFvSVeNLVW8Dp0PpnBa+fJezc07Nz7UF4=",

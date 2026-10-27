@@ -30,7 +30,8 @@ import Sparkle
         } catch { lifecycleMessage = "Update service handoff error: " + error.localizedDescription }
     }
     func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
-        lifecycleMessage = "App update did not complete: " + error.localizedDescription
+        let ns = error as NSError
+        lifecycleMessage = (ns.domain == SUSparkleErrorDomain && ns.code == SUError.noUpdateError.rawValue) ? "Corso Shield is up to date." : "App update did not complete: " + error.localizedDescription
         resumeServiceIfNeeded()
     }
 }
