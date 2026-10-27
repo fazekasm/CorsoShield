@@ -45,7 +45,7 @@ Removal and recovery support `-WhatIf`/`-Confirm`. No automatic Windows app upda
 
 ## Tests and limits
 
-`powershell.exe -NoProfile -File .\Tests\Run-Tests.ps1` parses the scripts with Windows PowerShell 5.1 and runs isolated tests with all Defender/firewall/proxy mutation adapters mocked. It tests DPAPI authentication, recovery planning, backups, read-back, stale/tampered/weak baseline refusal, failure handling, and remediation/WhatIf guards. It never launches a live threat or changes host security settings. GitHub's Windows runner runs this suite. Actual Windows 11 GUI, UAC, live Defender removal, domain policies and restart behavior require device acceptance testing; no mom's-PC installation has been performed.
+`powershell.exe -NoProfile -File .\Tests\Run-Tests.ps1` parses the scripts with Windows PowerShell 5.1, initializes the Windows Forms UI without showing it, and runs isolated tests with all Defender/firewall/proxy mutation adapters mocked. It tests DPAPI authentication, recovery planning, backups, read-back, stale/tampered/weak baseline refusal, failure handling, and remediation/WhatIf guards. It never launches a live threat or changes host security settings. GitHub's Windows runner runs this suite. Actual Windows 11 GUI, UAC, live Defender removal, domain policies and restart behavior require device acceptance testing; no mom's-PC installation has been performed.
 
 Microsoft references:
 - https://learn.microsoft.com/en-us/powershell/module/defender/remove-mpthreat
