@@ -26,7 +26,7 @@ try {
         function script:Assert-CorsoDefenderActive {}
         function script:Get-CorsoIdentity { 'mock-device/mock-user' }
         function script:Get-CorsoSettings { return $script:settings.PSObject.Copy() }
-        function script:Get-CorsoThreats { return $script:threats }
+        function script:Read-CorsoDefenderThreats { return $script:threats }
         function script:Remove-MpThreat { $script:removals++; $script:threats=@() }
         function script:Set-CorsoSetting([string]$Name,$Value) {
             $script:writes++
@@ -62,6 +62,7 @@ try {
     $bytes=[IO.File]::ReadAllBytes($file); $original=$bytes.Clone(); $bytes[32]=$bytes[32] -bxor 1; [IO.File]::WriteAllBytes($file,$bytes)
     Assert-Throws { Get-CorsoRecoveryPlan $id } 'tampered baseline must fail'
     [IO.File]::WriteAllBytes($file,$original)
+    Assert ((Get-CorsoActiveHash @()) -eq (Get-CorsoActiveHash $null)) 'empty threat collections are supported'
     $hash=Get-CorsoActiveHash (Get-CorsoThreats)
     Remove-CorsoThreats -ExpectedActiveHash $hash -WhatIf
     Assert ((& $module {$script:removals}) -eq 0) 'WhatIf must not remediate'

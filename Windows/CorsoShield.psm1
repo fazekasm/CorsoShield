@@ -40,12 +40,14 @@ function Assert-CorsoDefenderActive {
     $status = Get-MpComputerStatus
     if (-not $status.AMServiceEnabled -or -not $status.AntivirusEnabled -or $status.AMRunningMode -ne 'Normal') { throw 'Defender is unavailable, passive or not the active antivirus. Corso will not disable another antivirus or force Defender into a different mode.' }
 }
+function Read-CorsoDefenderThreats { Get-MpThreat }
 function Get-CorsoThreats {
     Assert-CorsoWindows
-    return @(Get-MpThreat | Select-Object ThreatID,ThreatName,SeverityID,CategoryID,IsActive,DidThreatExecute,Resources)
+    return @(Read-CorsoDefenderThreats | Select-Object ThreatID,ThreatName,SeverityID,CategoryID,IsActive,DidThreatExecute,Resources)
 }
 function Get-CorsoActiveHash($Threats) {
-    $ids = @($Threats | Where-Object IsActive | ForEach-Object { ([string]$_.ThreatID) + ':' + (@($_.Resources | Sort-Object) -join '|') } | Sort-Object -Unique)
+    if ($null -eq $Threats) { return Get-CorsoHash '' }
+    $ids = @($Threats | Where-Object { $null -ne $_ -and $_.IsActive } | ForEach-Object { ([string]$_.ThreatID) + ':' + (@($_.Resources | Sort-Object) -join '|') } | Sort-Object -Unique)
     return Get-CorsoHash ($ids -join ',')
 }
 function Invoke-CorsoScan {

@@ -90,6 +90,7 @@ enum SettingsRecovery {
         try validate(result); return result
     }
     static func network(_ args: [String]) throws -> String {
+        try Shield.setup()
         let result = try ThreatChecks.command("/usr/sbin/networksetup", args)
         guard result.code == 0, !result.limited,
               !result.text.contains("** Error:"), !result.text.contains("You need administrator access") else {
