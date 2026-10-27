@@ -70,5 +70,6 @@ try {
     Remove-CorsoThreats -ExpectedActiveHash $hash -Confirm:$false | Out-Null
     Assert ((& $module {$script:removals}) -eq 1) 'Defender remediation adapter called exactly once'
     Assert (@(Get-CorsoThreats).Count -eq 0) 'mocked remediation result'
-    Write-Output 'PASS: PowerShell 5.1 syntax, DPAPI baseline integrity, recovery plan, backup/read-back, stale/tampered/weak baseline refusal, failure handling, remediation and WhatIf guards. No host security settings changed.'
+    & (Join-Path $root 'Start-CorsoShield.ps1') -ValidateOnly
+    Write-Output 'PASS: hidden Windows Forms initialization, PowerShell 5.1 syntax, DPAPI baseline integrity, recovery plan, backup/read-back, stale/tampered/weak baseline refusal, failure handling, remediation and WhatIf guards. No host security settings changed.'
 } finally { Remove-Module CorsoShield; if (Test-Path $storage) { Remove-Item -LiteralPath $storage -Recurse -Force } }

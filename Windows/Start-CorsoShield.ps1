@@ -1,5 +1,6 @@
 # Native Windows PowerShell GUI. Does not elevate itself or change execution policy.
 #requires -Version 5.1
+[CmdletBinding()]param([switch]$ValidateOnly)
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 [Windows.Forms.Application]::EnableVisualStyles()
@@ -86,4 +87,5 @@ $timer.Add_Tick({
     finally { Remove-Job $script:job -Force; $script:job=$null; foreach ($button in $script:buttons) { $button.Enabled=$true } }
 })
 $form.Add_FormClosing({ param($sender,$event) if ($null -ne $script:job) { $event.Cancel=$true; [void][Windows.Forms.MessageBox]::Show('An operation is still running. Wait for it to finish before closing. If Defender remains busy, inspect Windows Security. Closing Corso is not a reliable way to cancel a system scan.') } })
+if ($ValidateOnly) { $timer.Dispose(); $form.Dispose(); Write-Output 'Windows Forms initialization passed without showing UI or executing actions.'; return }
 $timer.Start(); [void]$form.ShowDialog(); $timer.Dispose(); $form.Dispose()
