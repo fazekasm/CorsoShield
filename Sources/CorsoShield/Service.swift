@@ -39,6 +39,7 @@ extension Shield {
         // Retain the inert original and metadata as a recovery/audit record.
     }
     static func background(enabled: Bool) throws {
+        if enabled { try SetupPermissions.requireReady(SetupPermissions.assess()) }
         try schedule(enabled: false, scans: false, hour: 18)
         let dir = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents")
         let url = dir.appendingPathComponent("local.corso.shield.background.plist")
@@ -52,6 +53,7 @@ extension Shield {
         guard code == 0 else { throw ServiceError.message(output) }
     }
     static func service() throws {
+        try SetupPermissions.requireReady(SetupPermissions.assess())
         try setup()
         let lock = open(root.appendingPathComponent("service.lock").path, O_CREAT | O_RDWR, 0o600)
         guard lock >= 0 else { throw ServiceError.message("Cannot open service lock") }

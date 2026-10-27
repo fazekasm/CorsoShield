@@ -1,4 +1,4 @@
-# Corso Shield macOS 2.2 — development build
+# Corso Shield macOS 2.3 — development build
 
 Continues the original SwiftUI/ClamAV project. Requires macOS 13+, an Apple Silicon or Intel Mac for the universal release binary, and Homebrew ClamAV. No telemetry or cloud dashboard is enabled. This is supplemental scanning, not a replacement for Apple's protections or a production endpoint security product.
 
@@ -51,7 +51,7 @@ CLI: run the installed app's `Contents/MacOS/CorsoShield --security-check`. Exit
 
 ## Not implemented
 
-Behavioral ransomware detection/blocking or recovery, USB insertion monitoring, network intrusion monitoring, execution-time interception, Windows executable/service and family dashboard. See ARCHITECTURE.md for the concrete design and release gates. No unavailable assistant messages from the prior conversation were reconstructed or treated as implemented features.
+Behavioral ransomware detection/blocking or recovery, USB insertion monitoring, network intrusion monitoring, execution-time interception, Windows custom service and family dashboard. A runnable Windows PowerShell companion beta is in [Windows/README.md](Windows/README.md). See ARCHITECTURE.md for the concrete design and release gates. No unavailable assistant messages from the prior conversation were reconstructed or treated as implemented features.
 
 ## Reference documentation
 
@@ -62,3 +62,19 @@ Behavioral ransomware detection/blocking or recovery, USB insertion monitoring, 
 ## Signed GitHub app updates (2.2)
 
 Use **Check for app updates…** or leave the frontend open for daily checks. Download/install uses signed GitHub release assets and requires confirmation. See [UPDATES.md](UPDATES.md) for trust, service restart behavior, and publishing instructions. The background scan service alone does not check for app updates.
+
+## Reviewed removal and settings recovery (2.3)
+
+Select a saved ClamAV report and use **Remove detected files to quarantine…**. This removes detected regular user files from their original locations, rechecks each digest, logs partial failures, and retains restore copies. Virus, Trojan and spyware signatures use the same scanner/remediation path; detection category alone does not authorize deleting arbitrary files. Scan again afterward. This is containment/removal of detected files, not disinfection of documents, automatic removal of running processes or complete persistence/rootkit cleanup. System files and heuristic-only process findings are not automatically removed.
+
+Use **Settings recovery…** to save a trusted baseline of DNS and the HTTP proxy for one exact network service (for example Wi-Fi). Save it only after independently verifying the configuration is trusted. Baselines are authenticated using a device-local Keychain key and tied to the same Mac. Restore requires a preview, refuses changed settings, saves a pre-change snapshot, applies only the covered settings, and verifies the result. On failure it attempts rollback and reports rollback failures. These operations may require administrator rights and can interrupt connectivity. No privileges are bypassed. Read-only parsing/authentication tests passed; live network writes have not been executed on your Mac.
+
+This version does not capture credentials or automatically recover arbitrary system preferences, firewall/VPN/browser settings, HTTPS/SOCKS/PAC proxy values, system files, encrypted files or deleted documents. Existing settings cannot be reconstructed if no trusted baseline exists. Keychain access and actual authorized network recovery require desktop acceptance testing. Same-user malware can invoke the app/account APIs, so the baseline is not tamper-proof against a fully compromised login session.
+
+## Windows companion beta 0.1
+
+See [Windows/README.md](Windows/README.md) for a runnable Windows PowerShell/Windows Forms application, Defender virus/Trojan/spyware remediation, trusted settings baselines, recovery previews and installation steps. Defender supplies real-time protection and its existing scheduler. The Windows beta does not implement the planned custom background service, signed MSI, signed app updater or family dashboard. No Windows machine has been installed or remediated by this task.
+
+## Installation permission onboarding
+
+The Mac first-run/per-build checklist and Windows installer/startup checks now guide required grants and report missing permissions. See [PERMISSIONS.md](PERMISSIONS.md). macOS Full Disk Access needs explicit owner approval; Windows administrator access remains session-scoped. Neither installer can silently guarantee every future permission. Background scans require current-build setup or explicit limited-scope acceptance.

@@ -1,16 +1,16 @@
 # Next platform architecture and retained requirements
 
-These are design decisions, not shipped protection features.
+Status: macOS app plus Windows companion beta. Planned components below are explicitly labeled.
 
 ## Windows companion build
 
-Use .NET 8+ worker service with a separate unprivileged tray/settings client. Keep Microsoft Defender active. Do not register Corso as the primary Windows Security Center antivirus, disable Defender, change exclusions, or force passive mode. Microsoft's documented coexistence behavior varies with Windows and Defender enrollment; verify Defender remains active in the Windows acceptance matrix. Reference: https://learn.microsoft.com/en-us/defender-endpoint/microsoft-defender-antivirus-compatibility
+The Windows PowerShell/Windows Forms companion in Windows/ now implements Defender health, scans/signature updates, reviewed remediation, daily Defender scan configuration and same-user DPAPI settings baselines/recovery. A .NET worker service and unprivileged tray/settings client remain future architecture. Keep Microsoft Defender active. Do not register Corso as the primary Windows Security Center antivirus, disable Defender, change exclusions, or force passive mode. Microsoft's documented coexistence behavior varies with Windows and Defender enrollment; verify Defender remains active in the Windows acceptance matrix. Reference: https://learn.microsoft.com/en-us/defender-endpoint/microsoft-defender-antivirus-compatibility
 
 Components: Windows service adapter for lifecycle/scheduling; Defender health adapter reads protection/signature/scan state; optional ClamAV second-opinion adapter runs only on demand or during idle schedules; directory watcher feeds a bounded debounced queue and rescans on overflow; quarantine broker owns ACL-restricted storage and authorizes each request. Named-pipe IPC validates the caller SID. No arbitrary command execution or file deletion endpoint. Default per-user scope; elevation only for a separately reviewed installer/broker. Defender owns real-time protection and ransomware enforcement.
 
 Shared conceptual contracts: Engine.scan(targets, budget) → report {schemaVersion, start/end, scope, engineVersion, signatureVersion, completeness, detections, errors}; Update.check/run → signature status; Scheduler due/completed/retry; Quarantine.review/move/list/restore; Health.snapshot. Keep OS paths and IDs inside adapters. Versioned health JSON example is in contracts/health.schema.json. Next build should implement the service and tray projects, not attempt to compile the SwiftUI app on Windows.
 
-Windows release tests: Windows 11 standard/admin accounts, Defender remains active before/after install, offline signatures, watcher overflow, sleep/resume, service restart, bounded queue, signed MSI uninstall, quarantine ACL/path/race attacks, restore refusal, and CPU/memory measurements on a low-spec PC. No Windows runtime has been tested here.
+Windows release tests: Windows 11 standard/admin accounts, Defender remains active before/after install, offline signatures, watcher overflow, sleep/resume, service restart, bounded queue, signed MSI uninstall, quarantine ACL/path/race attacks, restore refusal, and CPU/memory measurements on a low-spec PC. Windows PowerShell parser and mocked remediation/recovery tests run in CI; live Defender remediation and GUI acceptance on Windows 11 remain required.
 
 ## Family health dashboard: opt-in plan
 

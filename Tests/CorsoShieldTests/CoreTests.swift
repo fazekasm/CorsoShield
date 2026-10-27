@@ -43,6 +43,55 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(ThreatChecks.sipFinding("System Integrity Protection status: enabled.") == nil)
         XCTAssertTrue(ThreatChecks.sipFinding("unrecognized probe failure") == nil)
     }
+    func testRecoveryAuthenticationAndParsing() throws {
+        let key = SymmetricKey(size: .bits256)
+        let settings = NetworkSettings(service: "Wi-Fi", dns: ["1.1.1.1", "2606:4700:4700::1111"], proxyEnabled: false, proxyHost: "", proxyPort: 0)
+        let baseline = SettingsBaseline(schema: 1, id: UUID(), date: Date(), device: "fixture-device", settings: settings)
+        let sealed = try SettingsRecovery.seal(baseline, using: key)
+        XCTAssertEqual(try SettingsRecovery.unseal(sealed, using: key, device: "fixture-device").settings, settings)
+        XCTAssertThrowsError(try SettingsRecovery.unseal(sealed, using: SymmetricKey(size: .bits256), device: "fixture-device"))
+        XCTAssertThrowsError(try SettingsRecovery.unseal(sealed, using: key, device: "other-device"))
+        var envelope = try JSONDecoder().decode(AuthenticatedBaseline.self, from: sealed)
+        var tampered = envelope.payload; tampered[tampered.startIndex] ^= 1
+        envelope = AuthenticatedBaseline(payload: tampered, tag: envelope.tag)
+        XCTAssertThrowsError(try SettingsRecovery.unseal(JSONEncoder().encode(envelope), using: key, device: "fixture-device"))
+        XCTAssertEqual(try SettingsRecovery.parseDNS("There aren't any DNS Servers set on Wi-Fi."), [])
+        XCTAssertEqual(try SettingsRecovery.parseDNS("1.1.1.1\n8.8.8.8\n"), ["1.1.1.1", "8.8.8.8"])
+        XCTAssertThrowsError(try SettingsRecovery.parseDNS("unexpected failure"))
+        XCTAssertThrowsError(try SettingsRecovery.validate(NetworkSettings(service: "-bad", dns: [], proxyEnabled: false, proxyHost: "", proxyPort: 0)))
+        XCTAssertThrowsError(try SettingsRecovery.validate(NetworkSettings(service: "Wi-Fi", dns: ["not-an-IP"], proxyEnabled: false, proxyHost: "", proxyPort: 0)))
+        let proxy = "Enabled: Yes\nServer: proxy.example\nPort: 8080\nAuthenticated Proxy Enabled: 0\n"
+        XCTAssertEqual(try SettingsRecovery.parseProxy(proxy, service: "Wi-Fi", dns: []).proxyPort, 8080)
+        XCTAssertThrowsError(try SettingsRecovery.parseProxy(proxy.replacingOccurrences(of: "Enabled: 0", with: "Enabled: 1"), service: "Wi-Fi", dns: []))
+    }
+    func testReviewedRemoval() throws {
+        let fm = FileManager.default
+        let root = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let previous = ProcessInfo.processInfo.environment["CORSO_TEST_ROOT"]
+        setenv("CORSO_TEST_ROOT", root.path, 1)
+        let folder = fm.homeDirectoryForCurrentUser.appendingPathComponent("Documents/Codex/removal-test-" + UUID().uuidString)
+        try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer {
+            if let previous = previous { setenv("CORSO_TEST_ROOT", previous, 1) } else { unsetenv("CORSO_TEST_ROOT") }
+            try? fm.removeItem(at: root); try? fm.removeItem(at: folder)
+        }
+        let first = folder.appendingPathComponent("fixture1.txt"), second = folder.appendingPathComponent("fixture2.txt")
+        try Data("harmless1".utf8).write(to: first); try Data("harmless2".utf8).write(to: second)
+        let detections = [Detection(path: first.path, signature: "Test", digest: try Shield.digest(first)), Detection(path: second.path, signature: "Test", digest: try Shield.digest(second))]
+        try Data("changed fixture".utf8).write(to: second)
+        let summary = try Shield.removeThreats(detections)
+        XCTAssertTrue(summary.contains("Failed: 1"))
+        XCTAssertFalse(fm.fileExists(atPath: first.path)); XCTAssertTrue(fm.fileExists(atPath: second.path))
+    }
+    func testPermissionReadinessGuards() throws {
+        let ready = SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: true, probeReadable: true, probeDenied: false, limitedScopeAccepted: false)
+        try SetupPermissions.requireReady(ready)
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: false, engines: true, storage: true, currentReceipt: true, probeReadable: true, probeDenied: false, limitedScopeAccepted: false)))
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: false, probeReadable: true, probeDenied: false, limitedScopeAccepted: false)))
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: true, probeReadable: true, probeDenied: true, limitedScopeAccepted: false)))
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: false, storage: true, currentReceipt: true, probeReadable: true, probeDenied: false, limitedScopeAccepted: true)))
+        try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: true, probeReadable: false, probeDenied: true, limitedScopeAccepted: true))
+    }
     func testParser() {
         let d = Shield.parse("/tmp/a: b.txt: Test.Signature FOUND\n/tmp/clean: OK\nERROR: denied")
         XCTAssertEqual(d.count, 1)

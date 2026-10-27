@@ -30,5 +30,5 @@ precondition(error == 2)
 precondition(Shield.parse("/tmp/a: b: Test FOUND").first?.path == "/tmp/a: b")
 print("PASS: real ClamAV detection, clean scan, error exit, paths with spaces, report parser")
 SWIFT
-swiftc -module-cache-path .build/clang-cache Sources/CorsoShield/Core.swift Sources/CorsoShield/Service.swift Sources/CorsoShield/Threats.swift .build/core-test/main.swift -o .build/core-test/check
+swiftc -module-cache-path .build/clang-cache Sources/CorsoShield/Core.swift Sources/CorsoShield/Service.swift Sources/CorsoShield/Permissions.swift Sources/CorsoShield/Threats.swift .build/core-test/main.swift -o .build/core-test/check
 .build/core-test/check
