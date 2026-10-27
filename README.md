@@ -74,3 +74,7 @@ This version does not capture credentials or automatically recover arbitrary sys
 ## Windows companion beta 0.1
 
 See [Windows/README.md](Windows/README.md) for a runnable Windows PowerShell/Windows Forms application, Defender virus/Trojan/spyware remediation, trusted settings baselines, recovery previews and installation steps. Defender supplies real-time protection and its existing scheduler. The Windows beta does not implement the planned custom background service, signed MSI, signed app updater or family dashboard. No Windows machine has been installed or remediated by this task.
+
+## Installation permission onboarding
+
+The Mac first-run/per-build checklist and Windows installer/startup checks now guide required grants and report missing permissions. See [PERMISSIONS.md](PERMISSIONS.md). macOS Full Disk Access needs explicit owner approval; Windows administrator access remains session-scoped. Neither installer can silently guarantee every future permission. Background scans require current-build setup or explicit limited-scope acceptance.

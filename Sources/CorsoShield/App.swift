@@ -25,6 +25,7 @@ struct Content: View {
     @State var hour = 18
     @State var restoreID = ""
     @State var showRecovery = false
+    @State var showPermissions = false
     @State var pendingCleanup: Report?
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -46,10 +47,7 @@ struct Content: View {
                     HStack {
                         Button("Enable background service") { model.perform { try Shield.background(enabled: true); return "Background service enabled. Review reports for threats and permission errors." } }
                         Button("Stop background service") { model.perform { try Shield.background(enabled: false); return "Background service stopped." } }
-                        Button("Permission setup…") {
-                            model.message = "In Full Disk Access, add the installed Corso Shield.app and enable it. Restart the background service afterward. macOS requires your explicit approval; moving or replacing this unsigned development build may require reapproval. A successful Downloads scan does not prove full disk access."
-                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!)
-                        }
+                        Button("Permission setup…") { showPermissions = true }
                     }
                     HStack {
                         TextField("Quarantine folder UUID to restore", text: $restoreID)
@@ -88,6 +86,8 @@ struct Content: View {
                 Spacer(); Text("No files are removed automatically.").font(.caption)
             }
         }.padding(20).frame(minWidth: 850, minHeight: 650)
+        .onAppear { if !SetupPermissions.assess().ready { showPermissions = true } }
+        .sheet(isPresented: $showPermissions) { PermissionsPanel() }
         .sheet(isPresented: $showRecovery) { RecoveryPanel() }
         .alert("Remove the detected files?", isPresented: Binding(get: { pendingCleanup != nil }, set: { if !$0 { pendingCleanup = nil } })) {
             Button("Cancel", role: .cancel) { pendingCleanup = nil }
@@ -104,6 +104,7 @@ struct Content: View {
 @main struct CorsoApp: App {
     @StateObject private var updates = AppUpdates()
     init() {
+        if CommandLine.arguments.contains("--setup-check") { print(SetupPermissions.assess().summary); exit(0) }
         if CommandLine.arguments.contains("--enable-background") || CommandLine.arguments.contains("--disable-background") {
             do { try Shield.background(enabled: CommandLine.arguments.contains("--enable-background")); print("Background service configuration saved."); exit(0) } catch { fputs(error.localizedDescription + "\n", stderr); exit(2) }
         }

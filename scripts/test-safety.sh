@@ -14,6 +14,7 @@ func assertTrue(_ a: Bool) { precondition(a) }
 func assertFalse(_ a: Bool) { precondition(!a) }
 func assertThrows<T>(_ action: @autoclosure () throws -> T) { do { _ = try action(); fatalError("Expected refusal") } catch {} }
 let tests = CoreTests()
+try tests.testPermissionReadinessGuards()
 try tests.testReviewedRemoval()
 try tests.testRecoveryAuthenticationAndParsing()
 try tests.testQuarantineRestore()
@@ -25,5 +26,5 @@ print("PASS: authenticated recovery baseline/tamper/parser fixtures, security-in
 """
 Path('.build/safety/main.swift').write_text(s + helpers)
 GEN
-swiftc -module-cache-path .build/clang-cache Sources/CorsoShield/Core.swift Sources/CorsoShield/Service.swift Sources/CorsoShield/Threats.swift Sources/CorsoShield/Recovery.swift .build/safety/main.swift -o .build/safety/check
+swiftc -module-cache-path .build/clang-cache Sources/CorsoShield/Core.swift Sources/CorsoShield/Service.swift Sources/CorsoShield/Permissions.swift Sources/CorsoShield/Threats.swift Sources/CorsoShield/Recovery.swift .build/safety/main.swift -o .build/safety/check
 .build/safety/check

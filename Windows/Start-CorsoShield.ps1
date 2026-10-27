@@ -7,7 +7,7 @@ Add-Type -AssemblyName System.Drawing
 $script:workerPath=Join-Path $PSScriptRoot 'Invoke-CorsoAction.ps1'
 $script:job=$null; $script:action=''; $script:activeHash=''; $script:previewHash=''; $script:previewId=''
 $form=New-Object Windows.Forms.Form
-$form.Text='Corso Shield for Windows - companion beta 0.1'; $form.Width=1000; $form.Height=780; $form.MinimumSize=New-Object Drawing.Size(900,700)
+$form.Text='Corso Shield for Windows - companion beta 0.2'; $form.Width=1000; $form.Height=780; $form.MinimumSize=New-Object Drawing.Size(900,700)
 $layout=New-Object Windows.Forms.TableLayoutPanel
 $layout.Dock='Fill'; $layout.ColumnCount=1; $layout.RowCount=7
 $layout.RowStyles.Add((New-Object Windows.Forms.RowStyle('Absolute',62)))
@@ -50,6 +50,7 @@ function Add-CorsoButton($Parent,[string]$Text,[scriptblock]$Handler) {
     $button=New-Object Windows.Forms.Button; $button.Text=$Text; $button.AutoSize=$true; $button.Height=32
     $button.Add_Click($Handler); $Parent.Controls.Add($button); $script:buttons+=$button
 }
+Add-CorsoButton $tools 'Permission setup' { Start-CorsoJob 'Requirements' }
 Add-CorsoButton $tools 'Health' { Start-CorsoJob 'Health' }
 Add-CorsoButton $tools 'Review threats' { Start-CorsoJob 'Threats' }
 Add-CorsoButton $tools 'Update signatures' { Start-CorsoJob 'Update' }
@@ -83,9 +84,11 @@ $timer.Add_Tick({
         if ($script:action -eq 'SaveBaseline') { $baseline.Text=$result.BaselineId }
         if ($script:action -eq 'PreviewRecovery') { $script:previewHash=$result.CurrentHash }
         $status.Text='Action completed. Read the result and Windows Security history; completion is not proof of a clean system.'
+        if ($script:action -eq 'Requirements') { $status.Text=if ($result.Ready) { 'Required session prerequisites passed. Specific file/policy permissions are still checked at use.' } else { 'Setup incomplete. Review the prerequisite results before protected actions.' } }
     } catch { $output.Text=$_.Exception.Message; $status.Text='Action failed or was blocked. No success is asserted.' }
     finally { Remove-Job $script:job -Force; $script:job=$null; foreach ($button in $script:buttons) { $button.Enabled=$true } }
 })
 $form.Add_FormClosing({ param($sender,$event) if ($null -ne $script:job) { $event.Cancel=$true; [void][Windows.Forms.MessageBox]::Show('An operation is still running. Wait for it to finish before closing. If Defender remains busy, inspect Windows Security. Closing Corso is not a reliable way to cancel a system scan.') } })
+$form.Add_Shown({ Start-CorsoJob 'Requirements' })
 if ($ValidateOnly) { $timer.Dispose(); $form.Dispose(); Write-Output 'Windows Forms initialization passed without showing UI or executing actions.'; return }
 $timer.Start(); [void]$form.ShowDialog(); $timer.Dispose(); $form.Dispose()

@@ -83,6 +83,15 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(summary.contains("Failed: 1"))
         XCTAssertFalse(fm.fileExists(atPath: first.path)); XCTAssertTrue(fm.fileExists(atPath: second.path))
     }
+    func testPermissionReadinessGuards() throws {
+        let ready = SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: true, probeReadable: true, probeDenied: false, limitedScopeAccepted: false)
+        try SetupPermissions.requireReady(ready)
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: false, engines: true, storage: true, currentReceipt: true, probeReadable: true, probeDenied: false, limitedScopeAccepted: false)))
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: false, probeReadable: true, probeDenied: false, limitedScopeAccepted: false)))
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: true, probeReadable: true, probeDenied: true, limitedScopeAccepted: false)))
+        XCTAssertThrowsError(try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: false, storage: true, currentReceipt: true, probeReadable: true, probeDenied: false, limitedScopeAccepted: true)))
+        try SetupPermissions.requireReady(SetupAssessment(installed: true, engines: true, storage: true, currentReceipt: true, probeReadable: false, probeDenied: true, limitedScopeAccepted: true))
+    }
     func testParser() {
         let d = Shield.parse("/tmp/a: b.txt: Test.Signature FOUND\n/tmp/clean: OK\nERROR: denied")
         XCTAssertEqual(d.count, 1)

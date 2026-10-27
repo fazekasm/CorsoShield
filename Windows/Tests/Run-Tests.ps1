@@ -10,12 +10,21 @@ Get-ChildItem $root -Recurse -Include *.ps1,*.psm1 | ForEach-Object {
     $errors+=@($parseErrors)
 }
 if ($errors.Count -gt 0) { throw ($errors | Out-String) }
+. (Join-Path $root 'Install-Helpers.ps1')
 Import-Module (Join-Path $root 'CorsoShield.psm1') -Force
 $module=Get-Module CorsoShield
 $storage=Join-Path ([IO.Path]::GetTempPath()) ('Corso-tests-'+[Guid]::NewGuid())
 function Assert($Value,[string]$Message) { if (-not $Value) { throw "ASSERT: $Message" } }
 function Assert-Throws([scriptblock]$Work,[string]$Message) { $threw=$false; try { & $Work } catch { $threw=$true }; Assert $threw $Message }
 try {
+    $acl=New-CorsoInstallAcl
+    $rules=@($acl.GetAccessRules($true,$false,[Security.Principal.SecurityIdentifier]))
+    Assert ($rules.Count -eq 3) 'protected installer ACL has exactly three intended principals'
+    $users=@($rules | Where-Object { $_.IdentityReference.Value -eq 'S-1-5-32-545' })
+    Assert ($users.Count -eq 1 -and -not ($users[0].FileSystemRights -band [Security.AccessControl.FileSystemRights]::Write)) 'standard users cannot modify elevated launch scripts'
+    Test-CorsoLaunchIdentity 'S-1-5-21-1' 'S-1-5-21-1'
+    Assert-Throws { Test-CorsoLaunchIdentity 'S-1-5-21-1' 'S-1-5-21-2' } 'alternate administrator identity is refused'
+    & (Join-Path $root 'Install-CorsoShield.ps1') -WhatIf
     & $module {
         param($Storage)
         $script:CorsoRoot=$Storage
@@ -34,6 +43,20 @@ try {
             $script:settings.$Name=$Value
         }
     } $storage
+    & $module {
+        $script:environment=[pscustomobject]@{Supported=$true;Elevated=$true;MissingCommands=@();DefenderActive=$true;DefenderReason='fixture';StorageWritable=$true}
+        function script:Read-CorsoEnvironment { return $script:environment }
+    }
+    Assert (Get-CorsoRequirements).Ready 'complete session requirements'
+    & $module { $script:environment.Elevated=$false }
+    Assert (-not (Get-CorsoRequirements).Ready) 'install does not grant a future session admin token'
+    & $module { $script:environment.Elevated=$true; $script:environment.DefenderActive=$false }
+    Assert (-not (Get-CorsoRequirements).Ready) 'inactive Defender is not ready'
+    & $module { $script:environment.DefenderActive=$true; $script:environment.MissingCommands=@('Remove-MpThreat') }
+    Assert (-not (Get-CorsoRequirements).Ready) 'missing remediation command is not ready'
+    & $module { $script:environment.MissingCommands=@(); $script:environment.StorageWritable=$false }
+    Assert (-not (Get-CorsoRequirements).Ready) 'unwritable app data is not ready'
+    & $module { $script:environment.StorageWritable=$true }
     $id=Save-CorsoBaseline -Confirm:$false
     Assert ([Guid]::Parse($id) -ne [Guid]::Empty) 'trusted baseline ID'
     Assert-Throws { Get-CorsoRecoveryPlan '../escape' } 'path traversal must fail'

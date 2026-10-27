@@ -16,6 +16,33 @@ function Assert-CorsoAdmin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     if (-not ([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Open Windows PowerShell as administrator to run this action. Corso does not bypass UAC or tamper protection.' }
 }
+function Read-CorsoEnvironment {
+    Assert-CorsoWindows
+    $id=[Security.Principal.WindowsIdentity]::GetCurrent()
+    $admin=([Security.Principal.WindowsPrincipal]::new($id)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    $commands=@('Get-MpComputerStatus','Get-MpPreference','Get-MpThreat','Start-MpScan','Remove-MpThreat','Update-MpSignature','Get-NetFirewallProfile','Set-NetFirewallProfile','Set-MpPreference')
+    $missing=@($commands | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) })
+    $defenderActive=$false; $reason='Defender status unavailable'
+    try { $status=Get-MpComputerStatus; $defenderActive=$status.AMServiceEnabled -and $status.AntivirusEnabled -and $status.AMRunningMode -eq 'Normal'; $reason='Mode: '+$status.AMRunningMode } catch { $reason=$_.Exception.Message }
+    $storage=$false
+    try { Initialize-Corso; $probe=Join-Path $script:CorsoRoot ('setup-'+[Guid]::NewGuid()+'.tmp'); [IO.File]::WriteAllText($probe,''); Remove-Item -LiteralPath $probe; $storage=$true } catch {}
+    $os=Get-CimInstance Win32_OperatingSystem
+    return [pscustomobject]@{ Supported=([Environment]::OSVersion.Version.Build -ge 22000 -and $os.ProductType -eq 1); Elevated=$admin; MissingCommands=$missing; DefenderActive=$defenderActive; DefenderReason=$reason; StorageWritable=$storage }
+}
+function Get-CorsoRequirements {
+    $e=Read-CorsoEnvironment
+    return [pscustomobject]@{
+        Ready=($e.Supported -and $e.Elevated -and $e.MissingCommands.Count -eq 0 -and $e.DefenderActive -and $e.StorageWritable)
+        Windows11Supported=$e.Supported
+        AdministratorTokenForThisSession=$e.Elevated
+        MissingSystemCommands=$e.MissingCommands
+        DefenderActive=$e.DefenderActive
+        DefenderStatus=$e.DefenderReason
+        PrivateAppStorageWritable=$e.StorageWritable
+        StillRequired='User confirms each remediation/recovery. Policy, tamper protection, individual file ACLs and network restrictions can still block an operation. No bypass or permanent administrator grant occurs.'
+        Guidance='Use the installed Start Menu launcher and approve UAC as the same user. If another administrator identity is supplied, the launcher refuses to manage that other profile. Enable Defender in Windows Security if it is your chosen antivirus. Do not disable another provider to satisfy this screen.'
+    }
+}
 function Get-CorsoIdentity {
     $machine = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Cryptography' -Name MachineGuid).MachineGuid
     return "$machine/$([Security.Principal.WindowsIdentity]::GetCurrent().User.Value)"
@@ -209,4 +236,4 @@ function Set-CorsoDailyScan {
 }
 function Open-CorsoProtectionHistory { Start-Process 'windowsdefender://threat/' }
 function Open-CorsoData { Initialize-Corso; Start-Process explorer.exe -ArgumentList $script:CorsoRoot }
-Export-ModuleMember -Function Get-CorsoHealth,Get-CorsoThreats,Get-CorsoActiveHash,Invoke-CorsoScan,Update-CorsoSignatures,Remove-CorsoThreats,Save-CorsoBaseline,Get-CorsoRecoveryPlan,Restore-CorsoSettings,Set-CorsoDailyScan,Open-CorsoProtectionHistory,Open-CorsoData
+Export-ModuleMember -Function Get-CorsoRequirements,Get-CorsoHealth,Get-CorsoThreats,Get-CorsoActiveHash,Invoke-CorsoScan,Update-CorsoSignatures,Remove-CorsoThreats,Save-CorsoBaseline,Get-CorsoRecoveryPlan,Restore-CorsoSettings,Set-CorsoDailyScan,Open-CorsoProtectionHistory,Open-CorsoData
